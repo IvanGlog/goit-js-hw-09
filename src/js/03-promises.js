@@ -1,30 +1,15 @@
-import { Notify } from 'notiflix/build/notiflix-notify-aio';
+import Notiflix from 'notiflix';
 
 const refs = {
-  form: document.querySelector('form'),
+  delay: document.querySelector('[name=delay]'),
+  step: document.querySelector('[name=step]'),
+  amount: document.querySelector('[name=amount]'),
+  form: document.querySelector('.form'),
 };
-
-refs.form.addEventListener('submit', onCreatePromiseStart);
-
-function onCreatePromiseStart(e) {
-  e.preventDefault();
-  const step = Number(refs.form.elements.step.value);
-  let delay = Number(refs.form.elements.delay.value);
-  const amount = refs.form.elements.amount.value;
-  for (let position = 1; position <= amount; position += 1) {
-    createPromise(position, delay)
-      .then(({ position, delay }) => {
-        Notify.success(`✅ Fulfilled promise ${position} in ${delay}ms`);
-      })
-      .catch(({ position, delay }) => {
-        Notify.failure(`❌ Rejected promise ${position} in ${delay}ms`);
-      });
-    delay += step;
-  } 
-}
+refs.form.addEventListener('submit', forCreatePromise);
 
 function createPromise(position, delay) {
-  const p = new Promise((resolve, reject) =>
+  const promise = new Promise((resolve, reject) =>
     setTimeout(() => {
       const shouldResolve = Math.random() > 0.3;
       if (shouldResolve) {
@@ -34,6 +19,28 @@ function createPromise(position, delay) {
       }
     }, delay)
   );
-  return p;
+  return promise;
 }
 
+function forCreatePromise(event) {
+  event.preventDefault();
+  let step = Number(refs.step.value);
+  let delay = Number(refs.delay.value);
+  let amount = Number(refs.amount.value);
+  for (let position = 0; position < amount; position += 1) {
+    createPromise(position, delay)
+      .then(({ position, delay }) => {
+        // Fulfill
+        Notiflix.Notify.success(
+          `✅ Fulfilled promise ${position} in ${delay}ms`
+        );
+      })
+      .catch(({ position, delay }) => {
+        // Reject
+        Notiflix.Notify.failure(
+          `❌ Rejected promise ${position} in ${delay}ms`
+        );
+      });
+    delay += step;
+  }
+}

@@ -1,10 +1,16 @@
 import flatpickr from 'flatpickr';
 import 'flatpickr/dist/flatpickr.min.css';
-import { convertMs } from './convertMs';
-import { Notify } from 'notiflix/build/notiflix-notify-aio';
+import Notiflix from 'notiflix';
 
-let timerID = null;
-let userDate = null;
+const text = document.querySelector('#datetime-picker');
+const timerHtml = document.querySelector('.timer');
+const btnStart = document.querySelector('button[data-start]');
+const seconds = document.querySelector('span[data-seconds]');
+const minutes = document.querySelector('span[data-minutes]');
+const hours = document.querySelector('span[data-hours]');
+const days = document.querySelector('span[data-days]');
+
+btnStart.disabled = true;
 
 const options = {
   enableTime: true,
@@ -12,61 +18,57 @@ const options = {
   defaultDate: new Date(),
   minuteIncrement: 1,
   onClose(selectedDates) {
-    selectedDates[0] <= options.defaultDate
-      ? (Notify.info('Please choose a date in the future'),
-        (refs.button.disabled = true))
-      : (refs.button.disabled = false);
-    userDate = selectedDates[0];
+    if (selectedDates[0] < new Date()) {
+      Notiflix.Notify.failure('Please choose a date in the future');
+      btnStart.disabled = true;
+    } else {
+      btnStart.disabled = false;
+    }
   },
 };
 
-const fkatpicr = flatpickr('#datetime-picker', options);
+flatpickr(text, options);
 
-export const refs = {
-  input: document.querySelector('#datetime-picker'),
-  button: document.querySelector('[data-start]'),
-  secondsUi: document.querySelector('[data-seconds]'),
-  minutesUi: document.querySelector('[data-minutes]'),
-  hoursUi: document.querySelector('[data-hours]'),
-  daysUi: document.querySelector('[data-days]'),
-};
+function convertMs(ms) {
+  // Number of milliseconds per unit of time
+  const second = 1000;
+  const minute = second * 60;
+  const hour = minute * 60;
+  const day = hour * 24;
 
-window.addEventListener('click', startTimer);
+  // Remaining days
+  const days = Math.floor(ms / day);
+  // Remaining hours
+  const hours = Math.floor((ms % day) / hour);
+  // Remaining minutes
+  const minutes = Math.floor(((ms % day) % hour) / minute);
+  // Remaining seconds
+  const seconds = Math.floor((((ms % day) % hour) % minute) / second);
 
-function startTimer(e) {
-  if (e.target.nodeName !== 'BUTTON') return;
-  timerID = setInterval(countDownTimer, 1000);
-  refs.button.disabled = true;
-  refs.input.disabled = true;
+  return { days, hours, minutes, seconds };
 }
 
-function countDownTimer() {
-  userDate = Date.parse(refs.input.value);
-  const diff = userDate - Date.now();
-  let { days, hours, minutes, seconds } = getTimeComponents(diff);
-  if (userDate <= Date.now()) {
-    Notify.info('Please, choose date in future');
-    clearInterval(timerID);
-    refs.input.disabled = false;
-  }
-  if (diff <= 1000) {
-    clearInterval(timerID);
-    seconds = getTimeComponents(0).seconds;
-    minutes = getTimeComponents(0).minutes;
-    hours = getTimeComponents(0).hours;
-    days = getTimeComponents(0).days;
-    refs.input.disabled = false;
-  }
-  updateCountDownUI({ seconds, minutes, hours, days });
+function addLeadingZero(value) {
+  return value.toString().padStart(2, '0');
 }
 
-function getTimeComponents(time) {
-  return convertMs(time);
-}
-
-function updateCountDownUI({ seconds, minutes, hours, days }) {
-  refs.secondsUi.textContent = seconds;
-  refs.minutesUi.textContent = minutes;
-  refs.hoursUi.textContent = hours;
-  refs.daysUi.textContent = days;
-}
+btnStart.addEventListener('click', () => {
+  let timer = setInterval(() => {
+    let countdown = new Date(text.value) - new Date();
+    btnStart.disabled = true;
+    if (countdown >= 0) {
+      let timeObject = convertMs(countdown);
+      days.textContent = addLeadingZero(timeObject.days);
+      hours.textContent = addLeadingZero(timeObject.hours);
+      minutes.textContent = addLeadingZero(timeObject.minutes);
+      seconds.textContent = addLeadingZero(timeObject.seconds);
+      if (countdown <= 10000) {
+        timerHtml.style.color = 'tomato';
+      }
+    } else {
+      Notiflix.Notify.success('Countdown finished');
+      timerHtml.style.color = 'black';
+      clearInterval(timer);
+    }
+  }, 1000);
+});
